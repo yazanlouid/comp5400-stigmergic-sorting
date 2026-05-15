@@ -118,6 +118,34 @@ You can't really lose this milestone — every failure mode is a finding.
 
 **Report.tex commit.** `Methods — Evolved Controller` becomes writable: NN architecture, GA hyperparameters, fitness function with justification. Cite Stanley & Miikkulainen (2002) for NEAT context — and explicitly justify the simpler weight-evolution choice if you don't use NEAT (likely time-driven). Cite Trianni / Groß / Dorigo as evidence that neuroevolution works in collective tasks. First fitness-over-generations plot lands here.
 
+M4 isn't enough for the most failure-prone part of the project. Fitness design is where most neuroevolution attempts on collective tasks die quietly. Proper treatment:
+The core problem. Terminal cluster purity as the only signal is too sparse. An agent has to chain three behaviours — wander → pick up isolated pellet → drop near similar pellet — before any fitness signal exists. Random networks almost never produce that chain in generation 0. Most of the initial population scores at random-floor and selection has nothing to grip. This is the most common reason neuroevolution on sorting tasks looks "broken" — it's not broken, it's flat.
+Candidate components (each normalised to [0,1] before weighting):
+
+Cluster purity at episode end — what you actually care about. Terminal target.
+Cluster count reduction = 1 − (final_clusters / initial_clusters) — rewards consolidation.
+Time-integrated purity = (1/T) Σₜ purity(t) — denser signal than terminal-only. Cheap to compute, often the single biggest fix.
+Pickup–drop activity = number of pickup+drop events normalised by ceiling — bootstrap reward. Critical early; decay across generations.
+Locality bonus = average colour-similarity of pellets within radius r of each drop event — rewards good drops even before global clusters consolidate.
+
+Composite formulation. Use linear weighting because it's transparent and ablatable:
+F = α · purity_terminal + β · purity_integrated + γ · consolidation + δ · activity_decayed
+Starting weights: α=0.4, β=0.3, γ=0.2, δ=0.1, with δ decaying linearly to 0 by generation 25. Avoid multiplicative composites — they zero out when any component is zero, which is exactly the failure mode you're trying to escape.
+Pickup/drop bootstrap. Two-pronged:
+
+Initialise the pickup-output bias slightly positive (~+0.5) so generation 0 actually picks things up. Document this in Methods — it's a legitimate warm-start, not a cheat.
+Keep δ (activity term) active for the first ~25 generations, then switch it off. Gets the population off the floor; once agents are interacting with pellets, the purity-shaped terms take over.
+
+Per-episode noise. Single-episode fitness is too noisy. Evaluate each genome on k=3 episodes with different seeds, take the mean. Cost: 3× compute. Benefit: usable selection signal. Non-negotiable — if you skip this, fitness curves will be jagged and inter-seed variance will swamp any real learning.
+Reference-frame fitness. Compute Deneubourg's performance distribution on the same seed set once, store as baseline_purity_distribution. Then report evolved performance as Δ over baseline rather than absolute. "Evolved exceeds baseline by X" is a sharper sentence than "evolved reaches Y purity" and matches the comparative framing of the research question.
+Where this lives in the milestones:
+
+M4 implementation. The composite above as default. Hyperparameters in configs/fitness_default.yaml — version-controlled so the report can cite the exact values.
+M4 failure-yield (expanded). If fitness plateaus or oscillates, run a fitness ablation — turn off one component at a time, re-evolve. The ablation itself is a result. A figure showing "contribution of each fitness component to final performance" is publishable content even if the final controller doesn't beat the baseline.
+Report.tex commit. Methods/Evolved Controller gets a Fitness Function subsection with: the formula, normalisation scheme, weights, one-sentence justification per component, and the bootstrap rationale. The ablation, if run, goes in Results.
+
+One thing to resist. The urge to keep tuning α, β, γ, δ until evolution "works." That's reward hacking by proxy — you tune until the curve looks publishable, then you can't honestly defend the design choices. Pick the weights a priori with the reasoning above, run with them, report what happens. If results are poor, that's the finding and it's defensible. 
+
 ### M5 — Head-to-head experiment (1 day) — **the critical gate**
 
 **Gate.** Experiment 1 runs with ≥5 seeds per condition on the 2-colour baseline config. CSV results exist for both baseline and evolved. Statistical comparison computed (Mann–Whitney U for purity with effect size; Welch's t if you prefer parametric — justify either way).
