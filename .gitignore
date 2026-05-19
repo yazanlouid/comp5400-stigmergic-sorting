@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+## === Project-specific ===
+
+# Auto-generated experiment results (recreated by `python -m src.experiment --config ...`)
+# NOTE: experiments/configs/*.yaml are hand-written and SHOULD be tracked
+experiments/results/
+
+# Auto-generated viz snapshots (recreated by `_save_viz_snapshot()` in experiment.py)
+docs/figures/*.txt
+
+# Debug scripts (hand-written, disposable — per project convention)
+debug-files/
+
+# Scrapbook (living document, updated each session)
+scrapbook.md
+
+# report Flatex
+report.aux
+report.bbl
+report.blg
+report.out
