@@ -17,7 +17,8 @@ class SeedBank:
 
     def __init__(self, master_seed: int) -> None:
         self._master = np.random.RandomState(master_seed)
-        self._cache: dict[str, np.random.RandomState] = {}
+        self._rng_cache: dict[str, np.random.RandomState] = {}
+        self._seed_cache: dict[str, int] = {}
 
     def get_rng(self, name: str) -> np.random.RandomState:
         """Return a deterministic RandomState for the given subsystem name.
@@ -25,17 +26,17 @@ class SeedBank:
         Cached after first call — repeated calls with the same name return
         the same RandomState instance (same internal state).
         """
-        if name not in self._cache:
-            # Derive subsystem seed from master — guaranteed unique per name
+        if name not in self._rng_cache:
             subsystem_seed = self._master.randint(0, 2**31, dtype=np.int64)
-            self._cache[name] = np.random.RandomState(subsystem_seed)
-        return self._cache[name]
+            self._seed_cache[name] = subsystem_seed
+            self._rng_cache[name] = np.random.RandomState(subsystem_seed)
+        return self._rng_cache[name]
 
     def get_seed(self, name: str) -> int:
-        """Return the raw integer seed for a subsystem (for logging/debugging)."""
-        # Consume one value to lock in the seed, then recreate to return it
-        if name not in self._cache:
+        """Return the raw integer seed for a subsystem (for logging/debugging).
+
+        Does not mutate the RNG state — safe to call at any time.
+        """
+        if name not in self._seed_cache:
             self.get_rng(name)
-        # Extract seed from cached RNG — we use the first state value
-        rng = self._cache[name]
-        return int(rng.randint(0, 2**31, dtype=np.int64))
+        return self._seed_cache[name]

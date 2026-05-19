@@ -22,7 +22,7 @@ def test_pellet_placement_deterministic():
     a2.place_pellets()
     for p1, p2 in zip(a1.pellets, a2.pellets):
         assert p1.x == p2.x
-        assert p2.y == p2.y
+        assert p1.y == p2.y
         assert p1.colour == p2.colour
 
 

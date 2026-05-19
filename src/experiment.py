@@ -104,7 +104,8 @@ def run_experiment(config_path: str) -> dict:
 
     results_dir = os.path.join("experiments", "results")
     os.makedirs(results_dir, exist_ok=True)
-    prefix = f"{seed}_{agent_type}"
+    config_name = os.path.splitext(os.path.basename(config_path))[0]
+    prefix = f"{config_name}_{seed}_{agent_type}"
 
     csv_path = os.path.join(results_dir, f"{prefix}.csv")
     figures_dir = os.path.join("docs", "figures")
@@ -206,10 +207,12 @@ def run_experiment(config_path: str) -> dict:
                 interval_drops = 0
 
                 purity_history.append(purity)
-                if do_early_stop and _early_stop_check(
-                    purity_history, early_stop_window, early_stop_delta
-                ):
-                    break
+                if do_early_stop:
+                    window_samples = early_stop_window // metrics_interval
+                    if _early_stop_check(
+                        purity_history, window_samples, early_stop_delta
+                    ):
+                        break
 
     if max_ticks not in snapshot_ticks or tick_count < max_ticks:
         _save_viz_snapshot(arena, agents, tick_count - 1, figures_dir, prefix)

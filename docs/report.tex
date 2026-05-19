@@ -71,7 +71,7 @@ When \emph{not carrying} a pellet, the agent computes $f$ as the fraction of the
 \[
 P_{\text{pickup}} = \left(\frac{k_1}{k_1 + f}\right)^2
 \]
-When $f$ is high (homogeneous neighbourhood), pickup is unlikely --- the agent avoids breaking up existing clusters. When $f$ is low (mixed neighbourhood), pickup is more likely --- the agent targets isolated pellets. If pickup does not trigger, the agent performs a random walk (MOVE, TURN\_LEFT, or TURN\_RIGHT with equal probability).
+When $f$ is high (homogeneous neighbourhood), pickup is unlikely --- the agent avoids breaking up existing clusters. When $f$ is low (mixed neighbourhood), pickup is more likely. If pickup does not trigger, the agent performs a random walk (MOVE, TURN\_LEFT, or TURN\_RIGHT with equal probability).
 
 When \emph{carrying} a pellet, the agent computes $f$ as the fraction of \emph{similar-coloured} pellets in the sensor window. The probability of dropping is:
 \[

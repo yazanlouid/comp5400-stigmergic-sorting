@@ -27,7 +27,7 @@ Locked: 2026-05-16. Supersedes all prior design discussions.
 | Count | 20 | 1:10 agent-to-pellet ratio. Enough parallelism for emergent behaviour; few enough that inter-agent collisions don't dominate. |
 | Initial position | Uniform random within arena | Deterministic via SeedBank. |
 | Initial heading | Uniform random in [-180°, 180°] | No preferred direction at start. |
-| Sensor radius | r = 5 cells | "Local" sensing — 25% of arena area but ~1-3 pellets on average. r > 10 would let agents see too much and trivialize the task. |
+| Sensor radius | r = 5 cells | "Local" sensing — ~0.8% of arena area (π×5²/10000) but ~1-3 pellets on average given 200 pellets. r > 10 would let agents see too much and trivialize the task. |
 | Sensor output | `{red_density: float, blue_density: float}` | Normalised count of pellets per colour within sensor radius. Used by both Deneubourg baseline (f computation) and evolved controller (NN input). |
 | Carrying capacity | 1 pellet (binary: carrying/not carrying) | Matches biological model — one ant carries one brood item. |
 
