@@ -160,6 +160,81 @@ class BaseAgent:
         return (heading + 180) % 360 - 180
 
 
+class EvolvedAgent(BaseAgent):
+    """Agent controlled by an evolved NeuralController.
+
+    Senses the local environment, builds a 6-d input vector,
+    runs the controller forward pass, and selects an action
+    stochastically from the softmax output.
+    """
+
+    def __init__(
+        self,
+        agent_id: int,
+        x: float,
+        y: float,
+        heading_deg: float,
+        controller,
+    ) -> None:
+        """Create an evolved agent with the given controller.
+
+        Args:
+            agent_id: Unique identifier.
+            x: Horizontal position.
+            y: Vertical position.
+            heading_deg: Facing direction in degrees.
+            controller: NeuralController instance (shared across agents).
+        """
+        super().__init__(agent_id, x, y, heading_deg)
+        self.controller = controller
+
+    def decide_action(
+        self,
+        arena: Arena,
+        sensor_radius: float,
+        rng: np.random.RandomState,
+    ) -> Action:
+        """Choose action via neural controller forward pass.
+
+        1. Sense local pellet densities.
+        2. Build 6-d input vector from sensor reading + carry state.
+        3. Run controller forward pass → softmax probabilities.
+        4. Stochastic action selection from probability distribution.
+
+        Args:
+            arena: The arena to sense.
+            sensor_radius: Radius of the sensor window.
+            rng: Seeded RandomState for stochastic action selection.
+
+        Returns:
+            Selected discrete action.
+        """
+        reading = self.sense(arena, sensor_radius)
+
+        carrying_red = (
+            1.0 if self.carrying is not None and self.carrying.colour == "red" else 0.0
+        )
+        carrying_blue = (
+            1.0 if self.carrying is not None and self.carrying.colour == "blue" else 0.0
+        )
+
+        input_vec = np.array(
+            [
+                reading.red_density,
+                reading.blue_density,
+                reading.similar_density,
+                reading.dissimilar_density,
+                carrying_red,
+                carrying_blue,
+            ],
+            dtype=np.float64,
+        )
+
+        probs = self.controller.forward(input_vec)
+        action_idx = int(np.argmax(probs))
+        return Action(action_idx)
+
+
 def create_agents(count: int, arena: Arena, seed_bank: SeedBank) -> list[BaseAgent]:
     """Create *count* agents with random positions and headings.
 

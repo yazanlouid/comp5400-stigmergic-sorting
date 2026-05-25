@@ -1,0 +1,38 @@
+seed: 42
+
+arena:
+  width: 100
+  height: 100
+
+pellets:
+  total: 200
+  colours: 2
+
+agents:
+  count: 20
+  sensor_radius: 5
+
+episode:
+  max_ticks: 10000
+  early_stop_delta: 0.01
+  early_stop_window: 2000
+  metrics_interval: 100
+
+agent_type: evolved
+
+evolution:
+  pop_size: 30
+  generations: 50
+  tournament_size: 3
+  mutation_sigma: 0.3
+  mutation_rate: 1.0
+  eval_episodes: 3
+  eval_max_ticks: 5000
+  fitness_alpha: 0.20
+  fitness_beta: 0.15
+  fitness_gamma: 0.15
+  fitness_delta: 0.20
+  fitness_epsilon: 0.30
+  activity_decay_gen: 25
+  pickup_bias: 0.0
+  move_bias: 0.5
