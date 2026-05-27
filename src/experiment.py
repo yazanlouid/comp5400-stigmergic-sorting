@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import os
+import time
 
 import yaml
 from typing import TYPE_CHECKING
@@ -17,6 +18,7 @@ from .arena import Arena
 from .agents import BaseAgent, Action, create_agents
 from .metrics import cluster_purity, cluster_count
 from .logger import ConfigHeader, MetricsLogger, EventLogger, RunSummary
+from .viz import render_arena_metadata
 
 
 def load_config(path: str) -> dict:
@@ -90,6 +92,7 @@ def run_experiment(config_path: str) -> dict:
     arena.place_pellets()
 
     agents = create_agents(config["agents"]["count"], arena, seed_bank)
+    generation: str | int = "N/A"
 
     if agent_type == "deneubourg":
         from .baseline import DeneubourgAgent
@@ -99,6 +102,39 @@ def run_experiment(config_path: str) -> dict:
         agents = [
             DeneubourgAgent(a.id, a.x, a.y, a.heading_deg, k1=k1, k2=k2) for a in agents
         ]
+
+    elif agent_type == "evolved":
+        from .evolution import evolve
+        from .controller import NeuralController
+        from .agents import EvolvedAgent
+
+        evo_seed_bank = SeedBank(seed + 9999)
+        evo_rng = evo_seed_bank.get_rng("evolution")
+
+        print("Starting GA evolution...")
+        evo_result = evolve(config, seed)
+
+        best_genome = evo_result["best_genome"]
+        best_ctrl = NeuralController(best_genome)
+        generation = evo_result.get("generations", "N/A")
+
+        print(f"  Initial best fitness: {evo_result['best_fitness_initial']:.4f}")
+        print(f"  Final best fitness:   {evo_result['best_fitness_final']:.4f}")
+
+        improvement = (
+            (evo_result["best_fitness_final"] - evo_result["best_fitness_initial"])
+            / max(1e-9, evo_result["best_fitness_initial"])
+            * 100
+        )
+        print(f"  Improvement: {improvement:.1f}%")
+
+        pos_rng = seed_bank.get_rng("agents")
+        agents = []
+        for i in range(config["agents"]["count"]):
+            x = pos_rng.uniform(0.0, arena.width)
+            y = pos_rng.uniform(0.0, arena.height)
+            heading = pos_rng.uniform(-180.0, 180.0)
+            agents.append(EvolvedAgent(i, x, y, heading, best_ctrl))
 
     agent_rng = seed_bank.get_rng("agent_actions")
 
@@ -119,6 +155,7 @@ def run_experiment(config_path: str) -> dict:
 
     do_early_stop = early_stop_window > 0 and early_stop_delta > 0
     purity_history: list[float] = []
+    wall_start = time.time()
 
     tick_count = 0
     interval_pickups = 0
@@ -141,6 +178,25 @@ def run_experiment(config_path: str) -> dict:
         for tick in range(max_ticks):
             if tick in snapshot_ticks:
                 _save_viz_snapshot(arena, agents, tick, figures_dir, prefix)
+                positions = arena.get_all_pellet_positions()
+                colours = arena.get_all_pellet_colours()
+                snap_purity = cluster_purity(positions, colours)
+                snap_clusters = cluster_count(positions)
+                snap_carried = sum(1 for a in agents if a.carrying is not None)
+                wall_time = time.time() - wall_start
+                meta = {
+                    "seed": seed,
+                    "agent_type": agent_type,
+                    "generation": generation,
+                    "tick": tick,
+                    "purity": snap_purity,
+                    "cluster_count": snap_clusters,
+                    "pellets_on_ground": len(arena.pellets),
+                    "pellets_carried": snap_carried,
+                    "wall_time_s": wall_time,
+                }
+                png_path = os.path.join(figures_dir, f"{prefix}_tick{tick}.png")
+                render_arena_metadata(arena, agents, tick, png_path, meta)
 
             actions: list[tuple[BaseAgent, Action]] = []
             pre_carry: list[Pellet | None] = []
@@ -215,7 +271,27 @@ def run_experiment(config_path: str) -> dict:
                         break
 
     if max_ticks not in snapshot_ticks or tick_count < max_ticks:
-        _save_viz_snapshot(arena, agents, tick_count - 1, figures_dir, prefix)
+        end_tick = tick_count - 1
+        _save_viz_snapshot(arena, agents, end_tick, figures_dir, prefix)
+        positions = arena.get_all_pellet_positions()
+        colours = arena.get_all_pellet_colours()
+        snap_purity = cluster_purity(positions, colours)
+        snap_clusters = cluster_count(positions)
+        snap_carried = sum(1 for a in agents if a.carrying is not None)
+        wall_time = time.time() - wall_start
+        meta = {
+            "seed": seed,
+            "agent_type": agent_type,
+            "generation": generation,
+            "tick": end_tick,
+            "purity": snap_purity,
+            "cluster_count": snap_clusters,
+            "pellets_on_ground": len(arena.pellets),
+            "pellets_carried": snap_carried,
+            "wall_time_s": wall_time,
+        }
+        png_path = os.path.join(figures_dir, f"{prefix}_tick{end_tick}.png")
+        render_arena_metadata(arena, agents, end_tick, png_path, meta)
 
     positions = arena.get_all_pellet_positions()
     colours = arena.get_all_pellet_colours()

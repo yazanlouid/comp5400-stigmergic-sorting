@@ -94,14 +94,94 @@ Both metrics were validated against three synthetic configurations: (i) perfectl
 
 \subsection{Evolved Controller}
 \label{sec:methods:evolved}
-% To be written at M4
+
+\paragraph{Neural Network Architecture.}
+Each evolved agent is controlled by a single-layer feedforward neural network with 149 weights. The network takes a 6-dimensional input vector:
+\[\mathbf{x} = [\text{red\_dens}, \text{blue\_dens}, \text{similar\_dens}, \text{dissimilar\_dens}, \text{carrying\_red}, \text{carrying\_blue}]\]
+where density values are raw pellet counts within the sensor radius, and carrying flags are binary indicators of the carried pellet's colour. The hidden layer has 12 units with \(\tanh\) activation, and the output layer has 5 units with softmax activation, producing a probability distribution over the action space \(\{\text{MOVE}, \text{TURN\_LEFT}, \text{TURN\_RIGHT}, \text{PICKUP}, \text{DROP}\}\).
+
+The architecture was chosen to balance expressiveness against search space tractability. A single hidden layer of 12 units provides enough capacity to learn non-trivial sensorimotor mappings (the universal approximation theorem guarantees any continuous function can be approximated with a single hidden layer~\cite{cybenko1989}), while keeping the genome size (149 weights) small enough for efficient genetic search. We deliberately avoided recurrent architectures (e.g., CTRNNs) despite their biological plausibility~\cite{trianni2002}, as the added complexity would require per-architecture hyperparameter tuning that confounds the baseline comparison.
+
+\paragraph{Action Selection.}
+Agents select actions greedily: the action with the highest softmax probability is executed. This deterministic policy ensures that fitness evaluations are reproducible (no stochastic variance from action sampling) and that the fitness landscape is smooth with respect to weight perturbations. We explored stochastic action selection (sampling from the softmax distribution) but found it produced a flat fitness landscape where the genetic algorithm could not discriminate between genomes~\cite{stanley2002}.
+
+\paragraph{Genetic Algorithm.}
+We evolve the 149 weight vectors directly using a simple genetic algorithm~\cite{holland1975}. The initial population of 30 genomes is generated with Xavier uniform initialization~\cite{glorot2010} for the weight matrices and zero initialization for biases. No pickup bias is applied (agents start with no innate tendency to pick up pellets), allowing the GA to discover whether pickup behaviour is beneficial.
+
+Each generation proceeds as follows:
+\begin{enumerate}
+    \item The best individual from the previous generation is preserved (elitism).
+    \item The remaining 29 individuals are produced by tournament selection (tournament size \(k\!=\!3\)) followed by per-gene Gaussian mutation (\(\sigma\!=\!0.3\)).
+    \item No crossover is used, following the observation that mutation-only GAs can be effective for neural network weight evolution when the population size is sufficient~\cite{stanley2002}.
+\end{enumerate}
+
+\paragraph{Fitness Function.}
+The fitness function is a weighted composite of five components, each normalised to \([0,1]\):
+\[F = \alpha \cdot p_\text{term} + \beta \cdot p_\text{int} + \gamma \cdot c_\text{consol} + \delta_\text{eff} \cdot a_\text{act} + \varepsilon \cdot \ell_\text{local}\]
+
+\textit{Terminal purity} (\(p_\text{term}\), \(\alpha\!=\!0.20\)): cluster purity at the end of the episode. The primary sorting objective, but weighted modestly because it is a sparse signal (agents must chain wander\(\to\)pickup\(\to\)drop behaviours before any signal exists).
+
+\textit{Integrated purity} (\(p_\text{int}\), \(\beta\!=\!0.15\)): mean cluster purity sampled every 100 ticks. Provides denser gradient signal than terminal-only evaluation.
+
+\textit{Consolidation} (\(c_\text{consol}\), \(\gamma\!=\!0.15\)): \(1 - (\text{final\_clusters} / \text{initial\_clusters})\). Rewards reduction in the number of DBSCAN clusters, encouraging agents to merge small clusters.
+
+\textit{Activity} (\(a_\text{act}\), \(\delta\!=\!0.20\)): normalised count of pickup\(+\)drop events (capped at 400). Bootstrap reward that encourages agents to interact with pellets in early generations. The effective weight \(\delta_\text{eff}\) decays linearly to zero by generation 25: \(\delta_\text{eff} = \delta \cdot \max(0, 1 - g/25)\). This ensures activity is rewarded when the population needs it but does not dominate later generations.
+
+\textit{Locality} (\(\ell_\text{local}\), \(\varepsilon\!=\!0.30\)): for each drop event, the fraction of nearby pellets (within sensor radius) that match the dropped pellet's colour, averaged over all drops. This is the highest-weighted component because it provides a per-action gradient: agents that drop near similar pellets receive immediate credit, even before global clusters consolidate. This component was added after observing that purity-only fitness produced a flat landscape where the GA could not improve~\cite{gross2011}.
+
+\paragraph{Evaluation Protocol.}
+Each genome is evaluated over \(k\!=\!3\) episodes with different random seeds (pellet placement varies, agent positions vary). The mean fitness across episodes is used for selection. Each episode runs for 5,000 ticks (half the full experiment length), balancing evaluation fidelity against computational cost. The master seed for the GA is independent from the experiment seeds, ensuring no data leakage.
+
+\paragraph{Implementation Notes.}
+The GA runs for 50 generations. With a population of 30, 3 evaluation episodes, and 5,000 ticks per episode, each generation requires \(29 \times 3 \times 5{,}000 = 435{,}000\) tick evaluations (the elite individual is not re-evaluated). The full evolution takes approximately 2 hours on a single CPU core. The best genome from generation 50 is used for the head-to-head comparison in Section~\ref{sec:results:main}.
 
 \section{Results}
 \label{sec:results}
 
 \subsection{Experiment 1: Baseline vs Evolved}
 \label{sec:results:main}
-% To be written at M5
+
+We compare the Deneubourg baseline against the best evolved neural controller (generation 50, fitness\,=\,0.7136) across 5 random seeds (42, 123, 256, 7, 999). Each condition runs for 10,000 ticks on identical arena configurations.
+
+\paragraph{Headline result.} The Deneubourg baseline significantly outperforms the evolved controller on cluster purity. The baseline achieves a mean purity of 0.8337 ($\pm$0.0345) compared to 0.7193 ($\pm$0.0243) for the evolved controller --- a difference of 0.1144 (11.4\%). A Mann-Whitney U test confirms this difference is statistically significant ($U\!=\!25$, $p\!=\!0.0079$) with a rank-biserial effect size of $r\!=\!-1.0000$, indicating perfect separation: every baseline run outperforms every evolved run.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llccc}
+\toprule
+Condition & $n$ & Mean & Std & Median \\
+\midrule
+Deneubourg & 5 & 0.8337 & 0.0345 & 0.8432 \\
+Evolved & 5 & 0.7193 & 0.0243 & 0.7131 \\
+\midrule
+\textit{Mann-Whitney U} & -- & -- & $p\!=\!0.0079$ & $r\!=\!-1.0000$ \\
+\bottomrule
+\end{tabular}
+\caption{Final cluster purity across 5 seeds. The Deneubourg baseline significantly outperforms the evolved neural controller ($p\!<\!0.01$).}
+\label{tab:m5-results}
+\end{table}
+
+\paragraph{Cluster count.} Both conditions produce similar cluster counts (baseline: 42.6, evolved: 42.4), suggesting the evolved controller does not fail by producing too many or too few clusters, but rather by producing clusters of lower purity.
+
+\paragraph{Purity over time.} The time-series comparison (Figure~\ref{fig:m5-timeseries}) shows that the baseline achieves higher purity earlier in the episode and maintains the lead throughout. The evolved controller shows a slower initial convergence rate, suggesting it struggles to discover effective pickup/drop strategies within the evolutionary budget.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/m5_boxplot.png}
+\caption{Boxplot of final cluster purity across 5 seeds. The evolved controller shows no overlap with the baseline distribution.}
+\label{fig:m5-boxplot}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/m5_timeseries.png}
+\caption{Mean cluster purity over time (mean $\pm$ 1$\sigma$). The baseline achieves higher purity earlier and maintains the lead.}
+\label{fig:m5-timeseries}
+\end{figure}
+
+\paragraph{Interpretation.} The evolved controller's underperformance suggests that the Deneubourg rule is highly efficient for this task --- a minimal hand-designed local rule with good parameter choice outperforms a learned policy under tight evolutionary budgets (50 generations, 30 population, 149 weights). This is consistent with Brooks's argument for ``intelligence without representation''~\cite{brooks1991}: when the environment provides sufficient structure (local similarity cues), simple reactive rules can outperform learned policies that must discover the relevant structure from scratch.
+
+The evolved controller's fitness (0.7136) is a composite score that includes locality and activity bonuses not present in the purity metric. The GA may have optimised for these auxiliary components at the expense of terminal purity, suggesting a misalignment between the fitness function and the evaluation metric.
 
 \subsection{Extensions}
 \label{sec:results:extensions}
@@ -121,6 +201,16 @@ Both metrics were validated against three synthetic configurations: (i) perfectl
 
 \section*{AI Declaration}
 % To be written at M7
+
+\section*{Development Log}
+\label{sec:dev-log}
+\textbf{PNG Snapshot Visualization (2026-05-24).} Added \texttt{render\_arena\_metadata()} to \texttt{viz.py} which renders arena scatter plots with a semi-transparent metadata overlay box (top-left, monospace). The overlay displays: seed, agent type, generation, tick, cluster purity (colour-coded: green $>0.85$, yellow $>0.75$, red otherwise), cluster count, pellets on ground, pellets carried, and wall time. Wired into \texttt{experiment.py} at tick 0, mid, and end snapshots. PNGs save alongside existing .txt snapshots in \texttt{docs/figures/}. Verified: sanity experiment produces paired \texttt{\{prefix\}\_tick\{N\}.txt} and \texttt{\{prefix\}\_tick\{N\}.png} files.
+
+\textbf{Snapshot Render Script (2026-05-24).} Created \texttt{experiments/render\_snapshots.py} (70 lines) to convert all existing .txt snapshot files in \texttt{docs/figures/} to PNG scatter plots. CLI: \texttt{python experiments/render\_snapshots.py} renders all; single file path renders one. Uses matplotlib Agg backend with colour scheme matching \texttt{viz.py}. Generated 15 PNGs from existing snapshots.
+
+\textbf{Pygame Live GUI (2026-05-24).} Created \texttt{src/gui.py} (292 lines) and \texttt{experiments/run\_gui.py} for real-time simulation visualization. 800$\times$800 window with dark background, HUD showing live metrics (purity, clusters, tick, ground, carried, pickups, drops, speed). Pellets rendered as coloured circles, agents as triangles pointing in heading direction. Controls: Space (pause), R (reset), Q (quit), +/- (speed 1x--10x), S (snapshot). Run: \texttt{python -m experiments.run\_gui --config experiments/configs/baseline.yaml}.
+
+\textbf{Visualization Completion (2026-05-24).} All three visualization paths now ship with colour legends and DEBUG-GUIDE documentation for future AI agents. \texttt{viz.py} (303 lines): headless PNG rendering with metadata overlay + colour legend (upper-right). \texttt{render\_snapshots.py} (196 lines): converts existing .txt snapshots to PNGs with colour legend — 15 existing snapshots re-rendered. \texttt{gui.py} (330 lines): Pygame live GUI with \texttt{\_draw\_legend()} method showing pellet colours and agents in bottom-right corner. Colour map synchronization enforced: \texttt{\_PELLET\_COLOUR\_MAP} in \texttt{viz.py} is single source of truth; \texttt{gui.py} \texttt{PELLET\_COLOURS} (RGB tuples) and \texttt{render\_snapshots.py} \texttt{\_COLOURS} (hex strings) must match. All 41 tests pass.
 
 \bibliographystyle{plain}
 \bibliography{refs}
