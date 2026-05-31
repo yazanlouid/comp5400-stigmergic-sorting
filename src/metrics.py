@@ -4,9 +4,35 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 
 
+cluster_range = 2.0 #5
+
+def cluster_sizes(
+    positions: list[tuple[float, float]],
+    eps: float = cluster_range,
+    min_samples: int = 2,
+) -> list[int]:
+    """Return size of each DBSCAN cluster, excluding noise."""
+    if not positions:
+        return []
+
+    X = np.array(positions, dtype=np.float64)
+    labels = DBSCAN(eps=eps, min_samples=min_samples).fit(X).labels_
+
+    sizes: list[int] = []
+
+    for label in set(labels):
+        if label == -1:
+            continue
+
+        size = int(np.sum(labels == label))
+        sizes.append(size)
+
+    return sizes
+
+
 def cluster_count(
     positions: list[tuple[float, float]],
-    eps: float = 5.0,
+    eps: float = cluster_range, # 5
     min_samples: int = 2,
 ) -> int:
     """Count pellet clusters using DBSCAN, excluding noise.
@@ -38,7 +64,7 @@ def cluster_count(
 def cluster_purity(
     positions: list[tuple[float, float]],
     colours: list[str],
-    eps: float = 5.0,
+    eps: float = cluster_range,
     min_samples: int = 2,
 ) -> float:
     """Compute mean per-cluster colour purity using DBSCAN.

@@ -65,35 +65,40 @@ class BaseAgent:
     # ------------------------------------------------------------------
 
     def sense(self, arena: Arena, sensor_radius: float) -> SensorReading:
-        """Query the arena for local pellet densities.
-
-        Args:
-            arena: The arena to query.
-            sensor_radius: Radius (in world units) of the sensor window.
-
-        Returns:
-            SensorReading with red/blue counts and similar/dissimilar
-            densities relative to the pellet the agent is carrying.
-        """
+        """Query the arena for local pellet fractions."""
         nearby = arena.get_pellets_in_radius(self.x, self.y, sensor_radius)
         total = len(nearby)
 
+        if total == 0:
+            return SensorReading(
+                red_density=0.0,
+                blue_density=0.0,
+                similar_density=0.0,
+                dissimilar_density=0.0,
+            )
+
         red_count = sum(1 for p in nearby if p.colour == "red")
         blue_count = sum(1 for p in nearby if p.colour == "blue")
+
+        red_fraction = float(red_count) / total
+        blue_fraction = float(blue_count) / total
 
         if self.carrying is not None:
             my_colour = self.carrying.colour
             similar = sum(1 for p in nearby if p.colour == my_colour)
             dissimilar = total - similar
+
+            similar_fraction = float(similar) / total
+            dissimilar_fraction = float(dissimilar) / total
         else:
-            similar = 0.0
-            dissimilar = float(total)
+            similar_fraction = 0.0
+            dissimilar_fraction = 0.0
 
         return SensorReading(
-            red_density=float(red_count),
-            blue_density=float(blue_count),
-            similar_density=float(similar),
-            dissimilar_density=float(dissimilar),
+            red_density=red_fraction,
+            blue_density=blue_fraction,
+            similar_density=similar_fraction,
+            dissimilar_density=dissimilar_fraction,
         )
 
     # ------------------------------------------------------------------
@@ -158,6 +163,81 @@ class BaseAgent:
     def _normalize_heading(heading: float) -> float:
         """Wrap *heading* into the range [-180, 180]."""
         return (heading + 180) % 360 - 180
+
+
+class EvolvedAgent(BaseAgent):
+    """Agent controlled by an evolved NeuralController.
+
+    Senses the local environment, builds a 6-d input vector,
+    runs the controller forward pass, and selects an action
+    stochastically from the softmax output.
+    """
+
+    def __init__(
+        self,
+        agent_id: int,
+        x: float,
+        y: float,
+        heading_deg: float,
+        controller,
+    ) -> None:
+        """Create an evolved agent with the given controller.
+
+        Args:
+            agent_id: Unique identifier.
+            x: Horizontal position.
+            y: Vertical position.
+            heading_deg: Facing direction in degrees.
+            controller: NeuralController instance (shared across agents).
+        """
+        super().__init__(agent_id, x, y, heading_deg)
+        self.controller = controller
+
+    def decide_action(
+        self,
+        arena: Arena,
+        sensor_radius: float,
+        rng: np.random.RandomState,
+    ) -> Action:
+        """Choose action via neural controller forward pass.
+
+        1. Sense local pellet densities.
+        2. Build 6-d input vector from sensor reading + carry state.
+        3. Run controller forward pass → softmax probabilities.
+        4. Stochastic action selection from probability distribution.
+
+        Args:
+            arena: The arena to sense.
+            sensor_radius: Radius of the sensor window.
+            rng: Seeded RandomState for stochastic action selection.
+
+        Returns:
+            Selected discrete action.
+        """
+        reading = self.sense(arena, sensor_radius)
+
+        carrying_red = (
+            1.0 if self.carrying is not None and self.carrying.colour == "red" else 0.0
+        )
+        carrying_blue = (
+            1.0 if self.carrying is not None and self.carrying.colour == "blue" else 0.0
+        )
+
+        input_vec = np.array(
+            [
+                reading.red_density,
+                reading.blue_density,
+                reading.similar_density,
+                reading.dissimilar_density,
+                carrying_red,
+                carrying_blue,
+            ],
+            dtype=np.float64,
+        )
+
+        probs = self.controller.forward(input_vec)
+        action_idx = int(rng.choice(len(probs), p=probs))
+        return Action(action_idx)
 
 
 def create_agents(count: int, arena: Arena, seed_bank: SeedBank) -> list[BaseAgent]:

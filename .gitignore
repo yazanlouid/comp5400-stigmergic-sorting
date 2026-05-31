@@ -225,6 +225,7 @@ experiments/results/
 
 # Auto-generated viz snapshots (recreated by `_save_viz_snapshot()` in experiment.py)
 docs/figures/*.txt
+docs/figures/*.png
 
 # Debug scripts (hand-written, disposable — per project convention)
 debug-files/
