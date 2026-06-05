@@ -56,7 +56,7 @@ def test_population_init(rng):
 def test_composite_fitness_perfect():
     class FakeArena:
         def get_all_pellet_positions(self):
-            return [(10, 10) for _ in range(10)]
+            return [(float(i * 3), 10.0) for i in range(10)]
 
         def get_all_pellet_colours(self):
             return ["red"] * 10
@@ -64,21 +64,16 @@ def test_composite_fitness_perfect():
     fc = compute_composite_fitness(
         FakeArena(),
         initial_clusters=10,
-        purity_history=[1.0, 1.0, 1.0],
         pickup_count=400,
         drop_count=400,
-        locality_score=1.0,
-        generation=0,
-        alpha=0.4,
-        beta=0.3,
-        gamma=0.2,
-        delta=0.1,
-        epsilon=0.0,
+        pickup_quality=1.0,
+        drop_quality=1.0,
+        move_count=100,
     )
-    assert 0 <= fc.purity_terminal <= 1
-    assert 0 <= fc.purity_integrated <= 1
-    assert 0 <= fc.consolidation <= 1
-    assert 0 <= fc.activity <= 1
+    assert isinstance(fc, FitnessComponents)
+    assert fc.pickup_count == 400
+    assert fc.drop_count == 400
+    assert fc.total > 0
 
 
 def test_tournament_selection(rng):
@@ -99,40 +94,31 @@ def test_gaussian_mutation(rng):
 def test_activity_decay(rng):
     class FakeArena:
         def get_all_pellet_positions(self):
-            return [(10, 10) for _ in range(10)]
+            return [(float(i * 3), 10.0) for i in range(10)]
 
         def get_all_pellet_colours(self):
             return ["red"] * 10
 
-    fc0 = compute_composite_fitness(
+    # Higher drop quality should yield higher total fitness
+    fc_low = compute_composite_fitness(
         FakeArena(),
-        10,
-        [0.5],
-        100,
-        100,
-        0.0,
-        generation=0,
-        alpha=0,
-        beta=0,
-        gamma=0,
-        delta=0.1,
-        epsilon=0,
+        initial_clusters=10,
+        pickup_count=100,
+        drop_count=100,
+        pickup_quality=0.0,
+        drop_quality=0.0,
+        move_count=0,
     )
-    fc25 = compute_composite_fitness(
+    fc_high = compute_composite_fitness(
         FakeArena(),
-        10,
-        [0.5],
-        100,
-        100,
-        0.0,
-        generation=25,
-        alpha=0,
-        beta=0,
-        gamma=0,
-        delta=0.1,
-        epsilon=0,
+        initial_clusters=10,
+        pickup_count=100,
+        drop_count=100,
+        pickup_quality=1.0,
+        drop_quality=100.0,
+        move_count=0,
     )
-    assert fc0.total > fc25.total
+    assert fc_high.total > fc_low.total
 
 
 def test_create_initial_population_shape(rng):

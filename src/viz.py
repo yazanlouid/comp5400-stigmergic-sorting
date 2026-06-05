@@ -264,8 +264,6 @@ def render_arena_metadata(
         framealpha=0.85,
         facecolor="white",
         edgecolor="gray",
-        framestyle="round,pad=0.3",
-        zorder=4,
     )
 
     fig.savefig(save_path, dpi=150, bbox_inches="tight")
