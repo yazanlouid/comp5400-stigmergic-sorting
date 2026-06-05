@@ -116,9 +116,7 @@ class Arena:
         self._colours: list[str] = _COLOURS[:num_colours]
         self._pellets_per_colour: int = pellet_count // num_colours
 
-    # ------------------------------------------------------------------
     # Placement
-    # ------------------------------------------------------------------
 
     def place_pellets(self) -> None:
         """Deterministically place pellets using the SeedBank."""
@@ -136,17 +134,13 @@ class Arena:
                 self._hash.add(p)
                 pid += 1
 
-    # ------------------------------------------------------------------
     # Boundary
-    # ------------------------------------------------------------------
 
     def clamp_position(self, x: float, y: float) -> tuple[float, float]:
         """Clamp *(x, y)* to the arena boundaries."""
         return (max(0.0, min(x, self.width)), max(0.0, min(y, self.height)))
 
-    # ------------------------------------------------------------------
     # Queries
-    # ------------------------------------------------------------------
 
     def get_pellets_in_radius(self, x: float, y: float, radius: float) -> list[Pellet]:
         """Delegate to spatial hash for radius query."""
@@ -158,9 +152,7 @@ class Arena:
         """Filter radius query result by *colour*."""
         return [p for p in self._hash.query(x, y, radius) if p.colour == colour]
 
-    # ------------------------------------------------------------------
     # Pickup / Drop
-    # ------------------------------------------------------------------
 
     def pickup_pellet(
         self, x: float, y: float, pickup_radius: float = 1.0
@@ -187,9 +179,7 @@ class Arena:
         self.pellets.append(pellet)
         self._hash.add(pellet)
 
-    # ------------------------------------------------------------------
     # Metrics helpers
-    # ------------------------------------------------------------------
 
     def get_all_pellet_positions(self) -> list[tuple[float, float]]:
         """Return [(x, y), ...] for every pellet in the arena."""

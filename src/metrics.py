@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 
 
-cluster_range = 2.0 #5
+cluster_range = 2.0
 
 def cluster_sizes(
     positions: list[tuple[float, float]],
@@ -32,7 +32,7 @@ def cluster_sizes(
 
 def cluster_count(
     positions: list[tuple[float, float]],
-    eps: float = cluster_range, # 5
+    eps: float = cluster_range,
     min_samples: int = 2,
 ) -> int:
     """Count pellet clusters using DBSCAN, excluding noise.

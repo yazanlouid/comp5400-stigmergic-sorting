@@ -48,11 +48,7 @@ def small_config() -> dict[str, Any]:
 def mock_genome() -> np.ndarray:
     return np.random.RandomState(42).randn(NeuralController.TOTAL_PARAMS)
 
-
-# -----------------------------------------------------------------------
 # Config helpers
-# -----------------------------------------------------------------------
-
 
 class TestLoadConfig:
     def test_loads_baseline_yaml(self, baseline_config_path: str) -> None:
@@ -77,11 +73,7 @@ class TestConfigWithSeed:
         assert new["seed"] == 777
         assert original["seed"] == 0
 
-
-# -----------------------------------------------------------------------
 # Genome persistence
-# -----------------------------------------------------------------------
-
 
 class TestLoadSavedGenome:
     def test_roundtrip(self, mock_genome: np.ndarray, tmp_path) -> None:
@@ -129,11 +121,7 @@ class TestEvolveAndSave:
         assert np.allclose(loaded, genome)
         assert loaded.shape == (NeuralController.TOTAL_PARAMS,)
 
-
-# -----------------------------------------------------------------------
 # Simulation loops
-# -----------------------------------------------------------------------
-
 
 class TestRunSimLoop:
     def test_returns_expected_keys(self, small_config: dict[str, Any]) -> None:

@@ -14,8 +14,7 @@ from .controller import NeuralController
 class FitnessComponents:
     """Breakdown of fitness components.
 
-    Kept mostly for compatibility with the previous structure.
-    In this temporary version, only final_clusters and total matter.
+    Stores the main component values used for reporting and selection.
     """
 
     initial_clusters: int
@@ -37,6 +36,15 @@ def compute_composite_fitness(
     drop_quality: float,
     move_count: int
 ) -> FitnessComponents:
+    """Compute the composite fitness score used to evaluate an evolved controller.
+
+    The score combines cluster count, average cluster size, purity, drop quality,
+    and an interaction penalty. Higher values indicate stronger sorting behaviour
+    under the selected evaluation metrics.
+
+    Returns:
+        FitnessComponents object containing the component values and total score.
+    """
     positions = arena.get_all_pellet_positions()
     final_clusters = cluster_count(positions)
 
@@ -61,7 +69,6 @@ def compute_composite_fitness(
         + 800.0 * purity
         + 2.0 * drop_quality
         - 0.2 * interaction_count
-        #+ 0.0005 * move_count
     )
 
     return FitnessComponents(
@@ -145,9 +152,7 @@ def _run_episode(
             if action == Action.MOVE:
                 move_count += 1
 
-            # -------------------------
             # Successful PICKUP only
-            # -------------------------
             if action == Action.PICKUP and not was_carrying and is_carrying:
                 pickup_count += 1
 
@@ -182,9 +187,7 @@ def _run_episode(
                     # Isolated pickup is considered good.
                     pickup_quality += 1.0
 
-            # -------------------------
             # Successful DROP only
-            # -------------------------
             elif action == Action.DROP and was_carrying and not is_carrying:
                 drop_count += 1
                 total_drops += 1
@@ -239,7 +242,7 @@ def evaluate_genome(
 ) -> float:
     """Evaluate one genome over k episodes and return mean fitness.
 
-    In this temporary version:
+    In this version:
         fitness = mean final cluster_count across evaluation episodes.
 
     Important:
@@ -342,20 +345,15 @@ def evolve(
     config: dict,
     seed: int,
 ) -> dict:
-    """Run the full GA evolution loop.
+    """Run the full genetic algorithm evolution loop.
 
-    Temporary simple fitness:
-        maximise final cluster_count.
+    The algorithm evolves neural-controller genomes using tournament selection,
+    elitism, and Gaussian mutation. Candidate genomes are evaluated through
+    simulation episodes and scored using the composite fitness function.
 
     Returns:
-        {
-            "best_fitness_per_gen": list[float],
-            "avg_fitness_per_gen": list[float],
-            "best_genome": np.ndarray,
-            "best_fitness_initial": float,
-            "best_fitness_final": float,
-            "generation_times": list[float],
-        }
+        Dictionary containing the best genome, initial and final best fitness,
+        and per-generation fitness history.
     """
     evo = config.get("evolution", {})
 
@@ -382,9 +380,7 @@ def evolve(
         move_bias=move_bias,
     )
 
-    # ------------------------------------------------------------
     # Initial evaluation
-    # ------------------------------------------------------------
     fitnesses: list[float] = []
     for genome in population:
         f = evaluate_genome(genome, config, seed, generation=0)
@@ -404,9 +400,7 @@ def evolve(
         f"avg={float(np.mean(fitnesses)):.4f}"
     )
 
-    # ------------------------------------------------------------
     # Evolution loop
-    # ------------------------------------------------------------
     for gen in range(generations):
         gen_start = time.perf_counter()
 

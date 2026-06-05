@@ -60,9 +60,7 @@ class BaseAgent:
         self.heading_deg: float = heading_deg
         self.carrying: Pellet | None = None
 
-    # ------------------------------------------------------------------
     # Sensing
-    # ------------------------------------------------------------------
 
     def sense(self, arena: Arena, sensor_radius: float) -> SensorReading:
         """Query the arena for local pellet fractions."""
@@ -101,9 +99,7 @@ class BaseAgent:
             dissimilar_density=dissimilar_fraction,
         )
 
-    # ------------------------------------------------------------------
     # Actuation
-    # ------------------------------------------------------------------
 
     def apply_action(self, action: Action, arena: Arena) -> None:
         """Execute *action* and update agent/arena state.
@@ -132,9 +128,7 @@ class BaseAgent:
                 arena.drop_pellet(self.x, self.y, self.carrying)
                 self.carrying = None
 
-    # ------------------------------------------------------------------
     # Decision (override in subclasses)
-    # ------------------------------------------------------------------
 
     def decide_action(
         self,
@@ -155,9 +149,7 @@ class BaseAgent:
         idx = rng.randint(0, 3)
         return Action(idx)
 
-    # ------------------------------------------------------------------
     # Helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _normalize_heading(heading: float) -> float:

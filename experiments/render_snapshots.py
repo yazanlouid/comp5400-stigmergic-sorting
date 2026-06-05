@@ -1,33 +1,4 @@
-"""Render .txt snapshot files as PNG scatter plots.
-
-## DEBUG-GUIDE (for future AI agents)
-
-PURPOSE:
-  Takes pre-existing .txt snapshot files (CSV format from experiment.py) and
-  renders them as PNG scatter plots. Used for:
-  1. Re-rendering old snapshots after viz.py changes (legend, metadata format)
-  2. Batch conversion: all 15 existing snapshots → PNGs in one command
-
-DATA FLOW:
-  docs/figures/*.txt (CSV: type,x,y,colour)
-    → parse() extracts tick/pellets/agents/seed from # comments + CSV rows
-    → render() creates scatter plot with colour legend
-    → saves as docs/figures/{original_name}.png
-
-COLOUR LEGEND:
-  Each pellet colour present in the data gets a labelled dot in the legend.
-  Agents shown as black dots with white edges.
-  _COLOURS dict must match src/viz.py _PELLET_COLOUR_MAP exactly.
-
-USAGE:
-  python -m experiments.render_snapshots           # render all .txt files
-  python -m experiments.render_snapshots file.txt   # render single file
-
-GOTCHAS:
-  - Agg backend MUST be set before pyplot import (line 4).
-  - plt.close(fig) at end of render() prevents memory leaks.
-  - .txt files have # comments with metadata (tick, pellets, agents) before CSV.
-"""
+"""Render .txt snapshot files as PNG scatter plots."""
 
 import argparse, glob, os, re, sys
 import matplotlib

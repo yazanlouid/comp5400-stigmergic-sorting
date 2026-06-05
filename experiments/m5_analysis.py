@@ -1,26 +1,4 @@
-"""M5 statistical analysis — Mann-Whitney U, boxplots, time-series comparison.
-
-ARCHITECTURE (DEBUG-GUIDE):
-  Reads m5_aggregated.json (from m5_runner.py) and produces:
-    1. Mann-Whitney U test with rank-biserial effect size
-    2. Boxplot PNG (final purity distribution across seeds)
-    3. Time-series PNG (mean purity over ticks with ±1σ shading)
-    4. LaTeX table row for report.tex
-    5. stats JSON for downstream queries
-
-  Input format (m5_aggregated.json):
-    {
-      "seeds": [42, 123, 256, 7, 999],
-      "genome_path": "experiments/results/m5_best_genome.json",
-      "baseline_results": {"42": {final_purity, purity_history, ...}, ...},
-      "evolved_results": {"42": {final_purity, purity_history, ...}, ...},
-    }
-
-  Output files:
-    docs/figures/m5_boxplot.png
-    docs/figures/m5_timeseries.png
-    experiments/results/m5_stats.json
-"""
+"""M5 statistical analysis — Mann-Whitney U, boxplots, time-series comparison."""
 
 from __future__ import annotations
 
@@ -35,11 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats as sp_stats
 
-
-# ---------------------------------------------------------------------------
 # Data loading
-# ---------------------------------------------------------------------------
-
 
 def load_aggregated(path: str) -> dict[str, Any]:
     """Load m5_aggregated.json and return parsed dict."""
@@ -51,11 +25,7 @@ def _extract_purities(results: dict[str, Any]) -> list[float]:
     """Extract final_purity values from results dict (seed-keyed)."""
     return [v["final_purity"] for v in results.values()]
 
-
-# ---------------------------------------------------------------------------
 # Statistics
-# ---------------------------------------------------------------------------
-
 
 def mann_whitney_with_effect_size(
     baseline_purities: list[float],
@@ -89,11 +59,7 @@ def mann_whitney_with_effect_size(
         "median_evolved": float(np.median(e)),
     }
 
-
-# ---------------------------------------------------------------------------
 # Plots
-# ---------------------------------------------------------------------------
-
 
 def plot_boxplot(
     baseline_purities: list[float],
@@ -167,11 +133,7 @@ def plot_timeseries_comparison(
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-
-# ---------------------------------------------------------------------------
 # Reporting
-# ---------------------------------------------------------------------------
-
 
 def print_results_table(stats_result: dict[str, Any]) -> str:
     """Return a LaTeX tabular row string for report.tex.
@@ -194,11 +156,7 @@ def print_results_table(stats_result: dict[str, Any]) -> str:
 
     return "\n".join(rows)
 
-
-# ---------------------------------------------------------------------------
 # Pipeline
-# ---------------------------------------------------------------------------
-
 
 def run_analysis(
     aggregated_path: str,
@@ -253,11 +211,7 @@ def run_analysis(
 
     return stats_result
 
-
-# ---------------------------------------------------------------------------
 # CLI
-# ---------------------------------------------------------------------------
-
 
 def main() -> None:
     """Run M5 analysis from command line."""

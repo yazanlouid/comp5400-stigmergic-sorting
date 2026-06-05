@@ -21,14 +21,12 @@ from src.metrics import cluster_purity, cluster_count
 from src.rng import SeedBank
 
 
-# --- Constants ---
+# Constants
 WINDOW_W = 800
 WINDOW_H = 600
 HUD_H = 40
 
 # Keep the arena fully inside the window.
-# Previous versions used WINDOW_W - 20 only, which can cut off the bottom
-# when WINDOW_H is smaller than WINDOW_W.
 ARENA_PX = min(WINDOW_W - 20, WINDOW_H - HUD_H - 20)
 
 PELLET_R = 3
@@ -91,9 +89,6 @@ class StigmergyGUI:
         self.cluster_eps = float(gui_cfg.get("cluster_eps", 2.0))
         self.cluster_min_samples = int(gui_cfg.get("cluster_min_samples", 2))
 
-        # Optional debug counter. Enable in YAML with:
-        # gui:
-        #   debug_action_counts: true
         self.debug_action_counts = bool(gui_cfg.get("debug_action_counts", False))
         self.action_counts = {name: 0 for name in Action.names()}
 
@@ -109,9 +104,7 @@ class StigmergyGUI:
 
         self._setup_sim()
 
-    # ------------------------------------------------------------------
     # Genome helpers
-    # ------------------------------------------------------------------
 
     def _default_genome_path(self) -> str:
         """Default path used when save/load path is not supplied."""
@@ -239,9 +232,7 @@ class StigmergyGUI:
 
         return self.evolved_controller
 
-    # ------------------------------------------------------------------
     # Simulation setup
-    # ------------------------------------------------------------------
 
     def _setup_sim(self) -> None:
         """Initialise arena, agents, and RNG from config."""
@@ -303,9 +294,7 @@ class StigmergyGUI:
         """
         self._setup_sim()
 
-    # ------------------------------------------------------------------
     # Tick/update logic
-    # ------------------------------------------------------------------
 
     def _run_tick(self) -> None:
         """Execute one simulation tick using two-phase commit."""
@@ -340,9 +329,7 @@ class StigmergyGUI:
         if self.debug_action_counts and self.tick % 500 == 0:
             print(f"Tick {self.tick} action counts: {self.action_counts}")
 
-    # ------------------------------------------------------------------
     # Drawing
-    # ------------------------------------------------------------------
 
     def _draw_hud(self) -> None:
         """Draw HUD bar at top of window."""
@@ -555,9 +542,7 @@ class StigmergyGUI:
             self.screen.blit(surf, (bx + 28, y - 7))
             y += 18
 
-    # ------------------------------------------------------------------
     # Input / lifecycle
-    # ------------------------------------------------------------------
 
     def _save_snapshot(self) -> None:
         """Save current frame as PNG."""

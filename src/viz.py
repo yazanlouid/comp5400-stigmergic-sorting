@@ -1,37 +1,4 @@
-"""Matplotlib visualization for stigmergic sorting arena.
-
-## DEBUG-GUIDE (for future AI agents working on this file)
-
-ARCHITECTURE:
-  - This module is HEADLESS (matplotlib Agg backend). It never opens windows.
-  - All rendering produces PNG files saved to docs/figures/.
-  - Two rendering paths exist:
-    1. render_arena()       — legacy, no metadata overlay. Keep for backward compat.
-    2. render_arena_metadata() — PRIMARY path. Adds metadata box + colour legend.
-
-DATA FLOW:
-  experiment.py (main loop)
-    → at snapshot ticks (0, mid, end):
-    → computes purity + cluster_count from metrics.py
-    → builds metadata dict {seed, agent_type, generation, tick, purity, ...}
-    → calls render_arena_metadata(arena, agents, tick, save_path, metadata)
-    → saves PNG to docs/figures/{prefix}_tick{N}.png
-
-KEY GOTCHAS:
-  - Agg backend MUST be set BEFORE importing pyplot (line 7). If you see
-    "cannot import matplotlib.backends.backend_agg" move the use("Agg") call up.
-  - _PELLET_COLOUR_MAP is the SINGLE SOURCE OF TRUTH for pellet colours.
-    gui.py PELLET_COLOURS and render_snapshots.py _COLOURS must match this.
-  - Metadata box uses ax.transAxes coordinates (0-1), NOT data coordinates.
-  - plt.close(fig) is called at end of every render function to prevent
-    memory leaks during long experiments. NEVER remove it.
-
-COLOUR LEGEND:
-  Red dots   = pellets of colour "red"   (#e74c3c)
-  Blue dots  = pellets of colour "blue"  (#3498db)
-  Black dots = agents (white edge outline)
-  Purity in metadata box is colour-coded: green>0.85, yellow>0.75, red otherwise.
-"""
+"""Matplotlib visualization for stigmergic sorting arena."""
 
 from __future__ import annotations
 

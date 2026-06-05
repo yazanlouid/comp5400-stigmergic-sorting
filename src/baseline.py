@@ -36,9 +36,7 @@ class DeneubourgAgent(BaseAgent):
         self.k1: float = k1
         self.k2: float = k2
 
-    # ------------------------------------------------------------------
     # Decision
-    # ------------------------------------------------------------------
 
     def decide_action(
         self,

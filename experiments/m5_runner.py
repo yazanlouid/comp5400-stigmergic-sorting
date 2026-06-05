@@ -1,23 +1,4 @@
-"""M5 head-to-head experiment runner — Deneubourg baseline vs evolved neural controllers.
-
-ARCHITECTURE (DEBUG-GUIDE):
-  Evolve ONCE using fitness_default.yaml → save best genome (149-d vector) as JSON.
-  Then test that genome across >=5 seeds WITHOUT re-evolving.
-  Compare against Deneubourg baseline run on the same seeds.
-
-  Flow:
-    1. evolve_and_save()  — GA evolves once, saves genome to experiments/results/m5_best_genome.json
-    2. load_saved_genome() — loads genome from JSON (or triggers evolution if missing)
-    3. run_baseline_seed() — inline sim loop with DeneubourgAgent, returns metrics
-    4. run_evolved_seed()  — inline sim loop with EvolvedAgent sharing one NeuralController
-    5. run_m5_experiment() — orchestrates 5 seeds per condition, aggregates, saves JSON
-
-  Both run_*_seed functions inline the simulation loop from experiment.py (lines 178-270)
-  but stripped of CSV logging, snapshots, and viz — returning purity_history + cluster_history.
-
-  RNG: SeedBank(seed) for deterministic streams. No global np.random.
-  Genome JSON: {"seed": int, "genome": [float...], "best_fitness_final": float}
-"""
+"""M5 head-to-head experiment runner — Deneubourg baseline vs evolved neural controllers."""
 
 from __future__ import annotations
 
@@ -38,11 +19,7 @@ from src.controller import NeuralController
 from src.metrics import cluster_purity, cluster_count
 from src.evolution import evolve
 
-
-# ---------------------------------------------------------------------------
 # Config helpers
-# ---------------------------------------------------------------------------
-
 
 def load_config(path: str) -> dict[str, Any]:
     """Load YAML config file."""
@@ -56,11 +33,7 @@ def config_with_seed(config: dict[str, Any], seed: int) -> dict[str, Any]:
     cfg["seed"] = seed
     return cfg
 
-
-# ---------------------------------------------------------------------------
 # Genome persistence
-# ---------------------------------------------------------------------------
-
 
 def evolve_and_save(
     config_path: str,
@@ -108,11 +81,7 @@ def load_saved_genome(path: str) -> np.ndarray:
         data = json.load(f)
     return np.array(data["genome"], dtype=np.float64)
 
-
-# ---------------------------------------------------------------------------
-# Inline simulation loops (stripped from experiment.py for speed)
-# ---------------------------------------------------------------------------
-
+# Inline simulation loops
 
 def _run_sim_loop(
     agents: list[BaseAgent],
@@ -267,10 +236,7 @@ def run_evolved_seed(
         agents, arena, sensor_radius, max_ticks, metrics_interval, agent_rng
     )
 
-
-# ---------------------------------------------------------------------------
 # M5 orchestrator
-# ---------------------------------------------------------------------------
 
 SEEDS: list[int] = [42, 123, 256, 7, 999]
 RESULTS_DIR: str = os.path.join("experiments", "results")
@@ -381,11 +347,7 @@ def run_m5_experiment() -> dict[str, Any]:
         "genome_path": GENOME_PATH,
     }
 
-
-# ---------------------------------------------------------------------------
 # CLI entry
-# ---------------------------------------------------------------------------
-
 
 def main() -> None:
     """Run M5 experiment from command line."""
