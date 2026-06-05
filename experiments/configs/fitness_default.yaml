@@ -36,4 +36,5 @@ evolution:
   activity_decay_gen: 25
   pickup_bias: 0.0
   move_bias: 0.5
-  save_genome_path: experiments/results/fitness_quick_best_genome.json
+  save_genome_path: experiments/results/fitness_default_best_genome.json
+  load_genome_path: experiments/results/fitness_default_best_genome.json
